@@ -4,8 +4,10 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <time.h>
 
 #define MAX_HISTORY_SIZE 100
+#define MAX_COMMAND_LENGTH 256
 
 // Function to read user input
 char* read_user_input() {
@@ -48,44 +50,91 @@ int create_process_and_run(char* command) {
         int child_status;
         // Wait for the child process to complete
         waitpid(status, &child_status, 0);
-        printf("Child process exited with status %d\n", child_status);
+        printf("Parent process PID : %d \n",getpid());
+        printf("Child process (PID: %d) exited with status %d\n", status, child_status);
     }
     return 1;
 }
 
 // Function to maintain command history
-void maintain_history(char* command, char* history[], int* history_count) {
+void maintain_command_history(char* command, char* history[], int* history_count) {
     if (*history_count < MAX_HISTORY_SIZE) {
         history[*history_count] = strdup(command);
         (*history_count)++;
-    } else {
-        // Shift the existing history to accommodate the new command
-        for (int i = 0; i < MAX_HISTORY_SIZE - 1; i++) {
-            free(history[i]);
-            history[i] = strdup(history[i + 1]);
-        }
-        free(history[MAX_HISTORY_SIZE - 1]);
-        history[MAX_HISTORY_SIZE - 1] = strdup(command);
+    } 
+}
+
+// Function to maintain detailed history
+void maintain_detailed_history(char* command, char detailed_history[][4][256], int* detailed_history_count) {
+    if (*detailed_history_count < MAX_HISTORY_SIZE) {
+        // Store command in detailed history
+        strcpy(detailed_history[*detailed_history_count][0], command);
+
+        // Record PID
+        snprintf(detailed_history[*detailed_history_count][1], sizeof(detailed_history[*detailed_history_count][1]), "%d", getpid());
+
+        // Record execution time
+        time_t rawtime;
+        time(&rawtime);
+        snprintf(detailed_history[*detailed_history_count][2], sizeof(detailed_history[*detailed_history_count][2]), "%ld", rawtime);
+
+        // Record duration (to be calculated later)
+        strcpy(detailed_history[*detailed_history_count][3], "");
+
+        (*detailed_history_count)++;
+    } 
+}
+
+// Function to calculate duration for each command in detailed history
+void calculate_duration(char detailed_history[][4][256], int detailed_history_count) {
+    for (int i = 0; i < detailed_history_count; i++) {
+        long start_time = strtol(detailed_history[i][2], NULL, 10);
+        time_t rawtime;
+        time(&rawtime);
+
+        // Calculate duration in seconds
+        long duration = rawtime - start_time;
+        snprintf(detailed_history[i][3], sizeof(detailed_history[i][3]), "%ld", duration);
     }
 }
 
 // Function to print command history
-void print_history(char* history[], int history_count) {
+void print_command_history(char* history[], int history_count) {
     printf("Command History:\n");
     for (int i = 0; i < history_count; i++) {
         printf("%d: %s\n", i + 1, history[i]);
     }
 }
 
+// Function to print detailed history
+void print_detailed_history(char detailed_history[][4][256], int detailed_history_count) {
+    printf("Detailed Command History:\n");
+    for (int i = 0; i < detailed_history_count; i++) {
+        printf("Command %d:\n", i + 1);
+        printf("Command: %s\n", detailed_history[i][0]);
+        printf("PID: %s\n", detailed_history[i][1]);
+        printf("Execution Time: %s\n", detailed_history[i][2]);
+        printf("Duration: %s seconds\n", detailed_history[i][3]);
+        printf("-----------------------------\n");
+    }
+}
+
 // Function to launch a command
-int launch(char *command, char* history[], int* history_count) {
+int launch(char *command, char* history[], char detailed_history[][4][256], int* history_count, int* detailed_history_count) {
     if (strcmp(command, "history") == 0) {
-        print_history(history, *history_count);
+        print_command_history(history, *history_count);
         return 1;
     }
-    
-    maintain_history(command, history, history_count);
-    
+
+    if (strcmp(command, "detailed_history") == 0) {
+        calculate_duration(detailed_history, *detailed_history_count);
+        print_detailed_history(detailed_history, *detailed_history_count);
+        return 1;
+    }
+
+    maintain_command_history(command, history, history_count);
+    maintain_detailed_history(command, detailed_history, detailed_history_count);
+
     int status = create_process_and_run(command);
     return status;
 }
@@ -93,17 +142,23 @@ int launch(char *command, char* history[], int* history_count) {
 int main() {
     int status;
     char* history[MAX_HISTORY_SIZE];
+    char detailed_history[MAX_HISTORY_SIZE][4][256];
     int history_count = 0;
-    
+    int detailed_history_count = 0;
+
     do {
         char* command = read_user_input();
         if (strcmp(command, "exit") == 0)
             break;
-        status = launch(command, history, &history_count);
+        status = launch(command, history, detailed_history, &history_count, &detailed_history_count);
         free(command); // Free dynamically allocated memory
     } while (status);
 
-    // Free history commands
+    // Print the detailed history after the termination of the program
+    calculate_duration(detailed_history, detailed_history_count);
+    print_detailed_history(detailed_history, detailed_history_count);
+
+    // Free memory for command history
     for (int i = 0; i < history_count; i++) {
         free(history[i]);
     }
