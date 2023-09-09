@@ -5,6 +5,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define MAX_HISTORY_SIZE 100
+
 // Function to read user input
 char* read_user_input() {
     char input[256];
@@ -51,22 +53,60 @@ int create_process_and_run(char* command) {
     return 1;
 }
 
+// Function to maintain command history
+void maintain_history(char* command, char* history[], int* history_count) {
+    if (*history_count < MAX_HISTORY_SIZE) {
+        history[*history_count] = strdup(command);
+        (*history_count)++;
+    } else {
+        // Shift the existing history to accommodate the new command
+        for (int i = 0; i < MAX_HISTORY_SIZE - 1; i++) {
+            free(history[i]);
+            history[i] = strdup(history[i + 1]);
+        }
+        free(history[MAX_HISTORY_SIZE - 1]);
+        history[MAX_HISTORY_SIZE - 1] = strdup(command);
+    }
+}
+
+// Function to print command history
+void print_history(char* history[], int history_count) {
+    printf("Command History:\n");
+    for (int i = 0; i < history_count; i++) {
+        printf("%d: %s\n", i + 1, history[i]);
+    }
+}
 
 // Function to launch a command
-int launch(char *command) {
-    int status;
-    status = create_process_and_run(command);
+int launch(char *command, char* history[], int* history_count) {
+    if (strcmp(command, "history") == 0) {
+        print_history(history, *history_count);
+        return 1;
+    }
+    
+    maintain_history(command, history, history_count);
+    
+    int status = create_process_and_run(command);
     return status;
 }
 
-
 int main() {
     int status;
+    char* history[MAX_HISTORY_SIZE];
+    int history_count = 0;
+    
     do {
         char* command = read_user_input();
-        status = launch(command);
+        if (strcmp(command, "exit") == 0)
+            break;
+        status = launch(command, history, &history_count);
         free(command); // Free dynamically allocated memory
     } while (status);
+
+    // Free history commands
+    for (int i = 0; i < history_count; i++) {
+        free(history[i]);
+    }
 
     return 0;
 }
