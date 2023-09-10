@@ -31,17 +31,17 @@ int create_process_and_run(char* command) {
     } else if (status == 0) {
         // This code runs in the child process
         // Split the command into tokens
-        char* tokens[10]; // Adjust the array size as needed
+        char* Words[10]; // Adjust the array size as needed
         int i = 0;
-        char* token = strtok(command, " ");
-        while (token != NULL && i < 10) {
-            tokens[i++] = token;
-            token = strtok(NULL, " ");
+        char* Word = strtok(command, " ");
+        while (Word != NULL && i < 10) {
+            Words[i++] = Word;
+            Word = strtok(NULL, " ");
         }
-        tokens[i] = NULL; // Null-terminate the argument list
+        Words[i] = NULL; // Null-terminate the argument list
 
         // Execute the user command using exec
-        if (execvp(tokens[0], tokens) == -1) {
+        if (execvp(Words[0], Words) == -1) {
             perror("execvp");
             exit(EXIT_FAILURE);
         }
@@ -115,7 +115,7 @@ void print_detailed_history(char detailed_history[][4][256], int detailed_histor
         printf("PID: %s\n", detailed_history[i][1]);
         printf("Execution Time: %s\n", detailed_history[i][2]);
         printf("Duration: %s seconds\n", detailed_history[i][3]);
-        printf("-----------------------------\n");
+        printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
     }
 }
 
