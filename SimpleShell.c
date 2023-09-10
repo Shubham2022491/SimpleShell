@@ -89,37 +89,43 @@ void maintain_detailed_history(char *command, char detailed_history[][5][256], i
 
 // Function to calculate duration for each command in detailed history
 void calculate_duration(char detailed_history[][5][256], int detailed_history_count) {
-    for (int i = 0; i < detailed_history_count; i++) {
+    while (detailed_history_count > 0) {
         double start_time;
         double end_time;
 
-        sscanf(detailed_history[i][1], "%lf", &start_time);
-        sscanf(detailed_history[i][2], "%lf", &end_time);
+        sscanf(detailed_history[detailed_history_count - 1][1], "%lf", &start_time);
+        sscanf(detailed_history[detailed_history_count - 1][2], "%lf", &end_time);
 
         // Calculate duration in microseconds
         double duration = (end_time - start_time) * 1e6;
-        snprintf(detailed_history[i][3], sizeof(detailed_history[i][3]), "%.6lf", duration);
+        snprintf(detailed_history[detailed_history_count - 1][3], sizeof(detailed_history[detailed_history_count - 1][3]), "%.6lf", duration);
+
+        detailed_history_count--;
     }
 }
 
 // Function to print command history
 void print_command_history(char *history[], int history_count) {
     printf("Command History:\n");
-    for (int i = 0; i < history_count; i++) {
+    int i = 0;
+    while (i < history_count) {
         printf("%d: %s\n", i + 1, history[i]);
+        i++;
     }
 }
 
 // Function to print detailed history
 void print_detailed_history(char detailed_history[][5][256], int detailed_history_count) {
     printf("Detailed Command History:\n");
-    for (int i = 0; i < detailed_history_count; i++) {
+    int i = 0;
+    while (i < detailed_history_count) {
         printf("Command %d:\n", i + 1);
         printf("Command: %s\n", detailed_history[i][0]);
         printf("Execution Start Time: %s seconds\n", detailed_history[i][1]);
         printf("Execution End Time: %s seconds\n", detailed_history[i][2]);
         printf("Duration: %s microseconds\n", detailed_history[i][3]);
         printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+        i++;
     }
 }
 
@@ -175,9 +181,8 @@ int main() {
     print_detailed_history(detailed_history, detailed_history_count);
 
     // Free memory for command history
-    for (int i = 0; i < history_count; i++) {
+    int i = 0;
+    while (i < history_count) {
         free(history[i]);
     }
-
-    return 0;
 }
